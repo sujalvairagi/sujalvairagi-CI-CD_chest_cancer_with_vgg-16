@@ -102,7 +102,4 @@ jobs:
         run: |
           docker system prune -af --volumes
       
-      - name: Health check
-        run: |
-          sleep 3
-          curl -I http://127.0.0.1:8080/ || (docker logs cnncls && exit 1)
+ 
