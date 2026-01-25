@@ -142,4 +142,4 @@ DVC
 
     ECR_REPOSITORY_NAME = simple-app
 
-[hosted link ](http://15.206.183.209:8080/)
+[hosted link ](http://15.206.183.209:8080/) c
