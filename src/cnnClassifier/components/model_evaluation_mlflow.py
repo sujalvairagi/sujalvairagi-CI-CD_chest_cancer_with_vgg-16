@@ -5,7 +5,7 @@ import mlflow.keras
 from urllib.parse import urlparse
 from cnnClassifier.entity.config_entity import EvaluationConfig
 from cnnClassifier.utils.common import read_yaml, create_directories,save_json
-
+import os 
 
 class Evaluation:
     def __init__(self, config: EvaluationConfig):
@@ -54,7 +54,7 @@ class Evaluation:
 
     
     def log_into_mlflow(self):
-        mlflow.set_registry_uri(self.config.mlflow_uri)
+        mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
         tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
         
         with mlflow.start_run():
