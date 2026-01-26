@@ -3,11 +3,19 @@ artifacts_root: artifacts
 
 data_ingestion:
   root_dir: artifacts/data_ingestion
-  source_URL: https://drive.google.com/file/d/1z0mreUtRmR-P-magILsDR3T7M6IkGXtY/view?usp=sharing
+  source_URL: https://drive.google.com/file/d/1ZgXJfs_QH5EN31siynIReZDv21wHRT4W/view?usp=drive_link
   local_data_file: artifacts/data_ingestion/data.zip
   unzip_dir: artifacts/data_ingestion
+ 
+  split_dir: artifacts/data_ingestion/Chest-CT-Scan-data
+  train_dir: artifacts/data_ingestion/Chest-CT-Scan-data/train
+  val_dir: artifacts/data_ingestion/Chest-CT-Scan-data/val
+  test_dir: artifacts/data_ingestion/Chest-CT-Scan-data/test
 
-
+  split_ratio:
+    train: 0.7
+    val: 0.15
+    test: 0.15
 
 prepare_base_model:
   root_dir: artifacts/prepare_base_model
