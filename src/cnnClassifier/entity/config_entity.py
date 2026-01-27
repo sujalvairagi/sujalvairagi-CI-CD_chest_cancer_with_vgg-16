@@ -8,6 +8,11 @@ class DataIngestionConfig:
     source_URL: str
     local_data_file: Path
     unzip_dir: Path
+    split_dir: Path
+    train_dir: Path
+    val_dir: Path
+    test_dir: Path
+    split_ratio: dict
 
 
 

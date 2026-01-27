@@ -29,7 +29,13 @@ class ConfigurationManager:
             root_dir=config.root_dir,
             source_URL=config.source_URL,
             local_data_file=config.local_data_file,
-            unzip_dir=config.unzip_dir 
+            unzip_dir=config.unzip_dir,
+            split_dir=Path(config.split_dir),
+            train_dir=Path(config.train_dir),
+            val_dir=Path(config.val_dir),
+            test_dir=Path(config.test_dir),
+            split_ratio=config.split_ratio
+     
         )
 
         return data_ingestion_config
