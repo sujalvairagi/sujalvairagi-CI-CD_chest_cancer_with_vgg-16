@@ -7,10 +7,11 @@ data_ingestion:
   local_data_file: artifacts/data_ingestion/data.zip
   unzip_dir: artifacts/data_ingestion
  
-  split_dir: artifacts/data_ingestion/Chest-CT-Scan-data
-  train_dir: artifacts/data_ingestion/Chest-CT-Scan-data/train
-  val_dir: artifacts/data_ingestion/Chest-CT-Scan-data/val
-  test_dir: artifacts/data_ingestion/Chest-CT-Scan-data/test
+  split_dir: artifacts/data_ingestion/CT-scan-data
+  train_dir: artifacts/data_ingestion/CT-scan-data/train
+  val_dir: artifacts/data_ingestion/CT-scan-data/val
+  test_dir: artifacts/data_ingestion/CT-scan-data/test
+
 
   split_ratio:
     train: 0.7

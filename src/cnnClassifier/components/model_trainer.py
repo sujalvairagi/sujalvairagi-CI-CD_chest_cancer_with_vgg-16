@@ -20,10 +20,10 @@ class Training:
 
     def train_valid_generator(self):
 
-        datagenerator_kwargs = dict(
-            rescale = 1./255,
-            validation_split=0.20
-        )
+        train_dir = os.path.join(self.config.training_data, "train")
+        val_dir = os.path.join(self.config.training_data, "val")
+
+        datagenerator_kwargs = dict(rescale=1./255)
 
         dataflow_kwargs = dict(
             target_size=self.config.params_image_size[:-1],
@@ -31,15 +31,12 @@ class Training:
             interpolation="bilinear"
         )
 
-        valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
-            **datagenerator_kwargs
-        )
+        valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(**datagenerator_kwargs)
 
         self.valid_generator = valid_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="validation",
-            shuffle=False,
-            **dataflow_kwargs
+        directory=val_dir,
+        shuffle=False,
+        **dataflow_kwargs
         )
 
         if self.config.params_is_augmentation:
@@ -56,11 +53,11 @@ class Training:
             train_datagenerator = valid_datagenerator
 
         self.train_generator = train_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="training",
+            directory=train_dir,
             shuffle=True,
             **dataflow_kwargs
         )
+
 
     
     @staticmethod

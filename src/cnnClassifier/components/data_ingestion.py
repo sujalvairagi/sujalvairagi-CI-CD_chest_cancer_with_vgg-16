@@ -73,9 +73,7 @@ class DataIngestion:
             copy_files(val_files, "val")
             copy_files(test_files, "test")
 
-        # OPTIONAL: remove original class folders to avoid confusion
-            for class_dir in class_dirs:
-             shutil.rmtree(class_dir)
+        
 
     
      
