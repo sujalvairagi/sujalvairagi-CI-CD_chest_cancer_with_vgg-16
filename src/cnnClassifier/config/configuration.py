@@ -79,7 +79,14 @@ class ConfigurationManager:
             params_epochs=params.EPOCHS,
             params_batch_size=params.BATCH_SIZE,
             params_is_augmentation=params.AUGMENTATION,
-            params_image_size=params.IMAGE_SIZE
+            params_image_size=params.IMAGE_SIZE,
+            params_weights=params.WEIGHTS,
+            params_warmup_epochs=params.WARMUP_EPOCHS,
+            params_fine_tune_epochs=params.FINE_TUNE_EPOCHS,
+            params_fine_tune_layers=params.FINE_TUNE_LAYERS,
+            params_warmup_lr=params.WARMUP_LR,
+            params_fine_tune_lr=params.FINE_TUNE_LR,
+
         )
 
         return training_config

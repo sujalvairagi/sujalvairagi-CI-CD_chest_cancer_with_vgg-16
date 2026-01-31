@@ -7,7 +7,6 @@ stages:
     outs:
       - artifacts/data_ingestion/CT-Scan-data
 
-
   prepare_base_model:
     cmd: python src/cnnClassifier/pipeline/stage_02_prepare_base_model.py
     deps:
@@ -22,7 +21,6 @@ stages:
     outs:
       - artifacts/prepare_base_model
 
-
   training:
     cmd: python src/cnnClassifier/pipeline/stage_03_model_trainer.py
     deps:
@@ -36,8 +34,8 @@ stages:
       - BATCH_SIZE
       - AUGMENTATION
     outs:
+      # ✅ MATCHED: Changed from .keras to .h5 to match config.yaml
       - artifacts/training/model.h5
-
 
   evaluation:
     cmd: python src/cnnClassifier/pipeline/stage_04_model_evaluation.py
@@ -45,6 +43,7 @@ stages:
       - src/cnnClassifier/pipeline/stage_04_model_evaluation.py
       - config/config.yaml
       - artifacts/data_ingestion/CT-Scan-data
+      # ✅ MATCHED: Changed from .keras to .h5 to match config.yaml
       - artifacts/training/model.h5
     params:
       - IMAGE_SIZE

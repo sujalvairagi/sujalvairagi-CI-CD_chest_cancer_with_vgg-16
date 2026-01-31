@@ -59,7 +59,9 @@ class DataIngestion:
             n_val = int(n_total * val_ratio)
             # remaining goes to test
             n_test = n_total - n_train - n_val
-            self.logger.info(f"[{class_dir.name}] total={n_total}, train={n_train}, val={n_val}, test={n_test}")
+            from cnnClassifier import logger
+            logger.info(f"[{class_dir.name}] total={n_total}, train={n_train}, val={n_val}, test={n_test}")
+
 
             train_files = images[:n_train]
             val_files = images[n_train:n_train + n_val]
