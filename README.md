@@ -143,3 +143,6 @@ DVC
     ECR_REPOSITORY_NAME = simple-app
 
 [hosted link ](http://52.66.118.188:8080) 
+
+mlflow_uri="https://dagshub.com/sujalvairagi/sujalvairagi-CI-CD_chest_cancer_with_vgg-16.mlflow/#/experiments/0/runs?searchFilter=&orderByKey=attributes.start_time&orderByAsc=false&startTime=LAST_24_HOURS&lifecycleFilter=Active&modelVersionFilter=All+Runs&datasetsFilter=W10%3D"
+

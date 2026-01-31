@@ -98,6 +98,7 @@ class ConfigurationManager:
         eval_config = EvaluationConfig(
             path_of_model=Path("artifacts/training/model.h5"),
             training_data = Path(self.config.data_ingestion.split_dir),
+            mlflow_uri=self.config.evaluation.mlflow_uri,
             all_params=self.params,
             params_image_size=self.params.IMAGE_SIZE,
             params_batch_size=self.params.BATCH_SIZE
