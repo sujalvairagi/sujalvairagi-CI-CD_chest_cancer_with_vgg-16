@@ -8,6 +8,11 @@ class DataIngestionConfig:
     source_URL: str
     local_data_file: Path
     unzip_dir: Path
+    split_dir: Path
+    train_dir: Path
+    val_dir: Path
+    test_dir: Path
+    split_ratio: dict
 
 
 
@@ -35,6 +40,12 @@ class TrainingConfig:
     params_batch_size: int
     params_is_augmentation: bool
     params_image_size: list
+    params_warmup_epochs: int
+    params_fine_tune_epochs: int
+    params_fine_tune_layers: int
+    params_warmup_lr: float
+    params_fine_tune_lr: float
+    params_weights: str
 
 
 
@@ -45,3 +56,4 @@ class EvaluationConfig:
     all_params: dict
     params_image_size: list
     params_batch_size: int
+    mlflow_uri: str

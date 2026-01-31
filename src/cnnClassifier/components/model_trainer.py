@@ -1,43 +1,59 @@
 import os
-import urllib.request as request
-from zipfile import ZipFile
 import tensorflow as tf
-import time
-from cnnClassifier.entity.config_entity import TrainingConfig
 from pathlib import Path
-
-
+from cnnClassifier.entity.config_entity import TrainingConfig
 
 class Training:
     def __init__(self, config: TrainingConfig):
         self.config = config
 
-    
-    def get_base_model(self):
-        self.model = tf.keras.models.load_model(
-            self.config.updated_base_model_path
+    def _build_model(self):
+        # Rebuild architecture manually
+        backbone = tf.keras.applications.EfficientNetB0(
+            input_shape=self.config.params_image_size,
+            weights=self.config.params_weights,
+            include_top=False
         )
+        backbone.trainable = False 
+        
+        inputs = tf.keras.Input(shape=self.config.params_image_size)
+        x = backbone(inputs, training=False)
+        x = tf.keras.layers.GlobalAveragePooling2D()(x)
+        x = tf.keras.layers.Dropout(0.2)(x)
+        outputs = tf.keras.layers.Dense(1, activation="sigmoid")(x)
+        
+        model = tf.keras.Model(inputs, outputs)
+        
+        # Compile needed for training
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=self.config.params_warmup_lr),
+            loss=tf.keras.losses.BinaryCrossentropy(),
+            metrics=["accuracy"]
+        )
+        return model
+
+    def get_base_model(self):
+        self.model = self._build_model()
+        # ✅ FIX: Load weights from the H5 file
+        self.model.load_weights(str(self.config.updated_base_model_path))
 
     def train_valid_generator(self):
+        train_dir = os.path.join(self.config.training_data, "train")
+        val_dir = os.path.join(self.config.training_data, "val")
 
-        datagenerator_kwargs = dict(
-            rescale = 1./255,
-            validation_split=0.20
-        )
+        datagenerator_kwargs = dict(rescale=1.0 / 255)
 
         dataflow_kwargs = dict(
             target_size=self.config.params_image_size[:-1],
             batch_size=self.config.params_batch_size,
-            interpolation="bilinear"
+            interpolation="bilinear",
+            class_mode="binary"
         )
 
-        valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
-            **datagenerator_kwargs
-        )
+        valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(**datagenerator_kwargs)
 
         self.valid_generator = valid_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="validation",
+            directory=val_dir,
             shuffle=False,
             **dataflow_kwargs
         )
@@ -56,34 +72,44 @@ class Training:
             train_datagenerator = valid_datagenerator
 
         self.train_generator = train_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="training",
+            directory=train_dir,
             shuffle=True,
             **dataflow_kwargs
         )
 
-    
     @staticmethod
     def save_model(path: Path, model: tf.keras.Model):
-        model.save(path)
+        # ✅ FIX: Save trained weights as H5
+        model.save_weights(str(path), save_format="h5")
 
-
-
-    
     def train(self):
-        self.steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
-        self.validation_steps = self.valid_generator.samples // self.valid_generator.batch_size
+        steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
+        validation_steps = self.valid_generator.samples // self.valid_generator.batch_size
+
+        # Phase 1: Warmup
+        self.model.fit(
+            self.train_generator,
+            epochs=self.config.params_warmup_epochs,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=self.valid_generator,
+            validation_steps=validation_steps
+        )
+
+        # Phase 2: Fine-tune
+        # Unfreeze layers if needed (simplified for stability)
+        self.model.trainable = True
+        self.model.compile(
+            optimizer=tf.keras.optimizers.SGD(learning_rate=self.config.params_fine_tune_lr),
+            loss=tf.keras.losses.BinaryCrossentropy(),
+            metrics=["accuracy"]
+        )
 
         self.model.fit(
             self.train_generator,
-            epochs=self.config.params_epochs,
-            steps_per_epoch=self.steps_per_epoch,
-            validation_steps=self.validation_steps,
-            validation_data=self.valid_generator
+            epochs=self.config.params_fine_tune_epochs,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=self.valid_generator,
+            validation_steps=validation_steps
         )
 
-        self.save_model(
-            path=self.config.trained_model_path,
-            model=self.model
-        )
-
+        self.save_model(path=self.config.trained_model_path, model=self.model)

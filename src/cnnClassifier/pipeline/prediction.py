@@ -1,32 +1,44 @@
-import numpy as np
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
 import os
-
-
+import tensorflow as tf
+import numpy as np
+from tensorflow.keras.preprocessing import image
 
 class PredictionPipeline:
-    def __init__(self,filename):
-        self.filename =filename
+    def __init__(self, filename):
+        self.filename = filename
+        # ✅ Load the model ONCE during initialization
+        self.model = self._load_model()
 
-
-    
-    def predict(self):
-        ## load model
+    def _load_model(self):
+        # Build architecture
+        backbone = tf.keras.applications.EfficientNetB0(
+            input_shape=(224, 224, 3),
+            weights=None, 
+            include_top=False
+        )
+        inputs = tf.keras.Input(shape=(224, 224, 3))
+        x = backbone(inputs, training=False)
+        x = tf.keras.layers.GlobalAveragePooling2D()(x)
+        x = tf.keras.layers.Dropout(0.2)(x)
+        outputs = tf.keras.layers.Dense(1, activation="sigmoid")(x)
+        model = tf.keras.Model(inputs, outputs)
         
-        # model = load_model(os.path.join("artifacts","training", "model.h5"))
-        model = load_model(os.path.join("model", "model.h5"))
+        # Load weights
+        model_path = os.path.join("artifacts", "training", "model.h5")
+        model.load_weights(model_path)
+        return model
 
-        imagename = self.filename
-        test_image = image.load_img(imagename, target_size = (224,224))
-        test_image = image.img_to_array(test_image)
-        test_image = np.expand_dims(test_image, axis = 0)
-        result = np.argmax(model.predict(test_image), axis=1)
-        print(result)
+    def predict(self):
+        # Preprocess image
+        img = image.load_img(self.filename, target_size=(224, 224))
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0
 
-        if result[0] == 1:
-            prediction = 'Benign (Normal)'
-            return [{ "image" : prediction}]
+        # ✅ Use the pre-loaded model
+        prediction = self.model.predict(img_array)
+        
+        if prediction[0][0] > 0.5:
+            return [{"image": "Normal"}]
         else:
-            prediction = 'Adenocarcinoma Cancer(malignant)'
-            return [{ "image" : prediction}]
+            return [{"image": "Adenocarcinoma Cancer"}]
