@@ -37,8 +37,17 @@ class PredictionPipeline:
 
         # ✅ Use the pre-loaded model
         prediction = self.model.predict(img_array)
+
+    
+
         
-        if prediction[0][0] > 0.5:
-            return [{"image": "Normal"}]
+        p = float(prediction[0][0])
+
+        if p >= 0.60:
+            result = {"label": "cancer", "confidence": p}
+        elif p <= 0.40:
+            result = {"label": "normal", "confidence": 1 - p}
         else:
-            return [{"image": "Adenocarcinoma Cancer"}]
+            result = {"label": "uncertain", "confidence": 1 - abs(p - 0.5) * 2,"p":p}
+        
+        return result

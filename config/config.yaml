@@ -24,4 +24,4 @@ training:
   trained_model_path: artifacts/training/model.h5
 
 evaluation:
-  mlflow_uri: 
+  mlflow_uri: https://dagshub.com/sujalvairagi/sujalvairagi-CI-CD_chest_cancer_with_vgg-16.mlflow

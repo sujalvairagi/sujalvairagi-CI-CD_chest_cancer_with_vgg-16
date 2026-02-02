@@ -30,11 +30,14 @@ stages:
       - artifacts/prepare_base_model
     params:
       - IMAGE_SIZE
-      - EPOCHS
       - BATCH_SIZE
       - AUGMENTATION
+      - WARMUP_EPOCHS
+      - WARMUP_LR
+      - FINE_TUNE_EPOCHS
+      - FINE_TUNE_LR
+      - FINE_TUNE_LAYERS
     outs:
-      # ✅ MATCHED: Changed from .keras to .h5 to match config.yaml
       - artifacts/training/model.h5
 
   evaluation:
@@ -43,7 +46,6 @@ stages:
       - src/cnnClassifier/pipeline/stage_04_model_evaluation.py
       - config/config.yaml
       - artifacts/data_ingestion/CT-Scan-data
-      # ✅ MATCHED: Changed from .keras to .h5 to match config.yaml
       - artifacts/training/model.h5
     params:
       - IMAGE_SIZE

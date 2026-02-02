@@ -6,6 +6,8 @@ import mlflow.keras
 from urllib.parse import urlparse
 from cnnClassifier.entity.config_entity import EvaluationConfig
 from cnnClassifier.utils.common import save_json
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
+import numpy as np
 
 
 class Evaluation:
@@ -52,7 +54,26 @@ class Evaluation:
         self.save_score()
 
     def save_score(self):
-        scores = {"loss": float(self.score[0]), "accuracy": float(self.score[1])}
+        y_true = self.test_generator.classes  # ground truth labels
+
+        y_prob = self.model.predict(self.test_generator)
+        y_pred = (y_prob >= 0.5).astype(int).reshape(-1)
+
+        cm = confusion_matrix(y_true, y_pred).tolist()
+
+        precision = precision_score(y_true, y_pred, zero_division=0)
+        recall = recall_score(y_true, y_pred, zero_division=0)
+        f1 = f1_score(y_true, y_pred, zero_division=0)
+
+        scores = {
+            "loss": float(self.score[0]),
+            "accuracy": float(self.score[1]),
+            "precision": float(precision),
+            "recall": float(recall),
+            "f1_score": float(f1),
+            "confusion_matrix": cm
+        }
+
         save_json(path=Path("scores.json"), data=scores)
 
     # ✅ THIS IS THE MISSING PIECE
@@ -67,7 +88,7 @@ class Evaluation:
             # Model logging (Conditional based on tracking server)
             mlflow.keras.log_model(self.model, "model")
             run = mlflow.active_run()
-            run_id = run.info.run_id
+                
 
             tracking_uri = mlflow.get_tracking_uri()
 
