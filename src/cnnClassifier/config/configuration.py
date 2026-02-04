@@ -5,6 +5,8 @@ from cnnClassifier.entity.config_entity import (DataIngestionConfig,
                                                 PrepareBaseModelConfig,
                                                 TrainingConfig,
                                                 EvaluationConfig)
+from cnnClassifier.entity.config_entity import CTGateConfig
+
 
 
 class ConfigurationManager:
@@ -105,4 +107,22 @@ class ConfigurationManager:
         )
         return eval_config
 
-      
+
+
+    def get_ct_gate_config(self) -> CTGateConfig:
+        config = self.config.ct_gate
+        params = self.params
+
+        create_directories([Path(config.root_dir)])
+
+        return CTGateConfig(
+            root_dir=Path(config.root_dir),
+            data_dir=Path(config.data_dir),
+            model_path=Path(config.model_path),
+            params_image_size=params.IMAGE_SIZE,
+            params_batch_size=params.BATCH_SIZE,
+            params_epochs=params.EPOCHS,
+            params_learning_rate=params.LEARNING_RATE,
+            mlflow_uri=config.mlflow_uri
+        )
+
