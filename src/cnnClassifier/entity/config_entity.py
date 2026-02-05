@@ -57,3 +57,18 @@ class EvaluationConfig:
     params_image_size: list
     params_batch_size: int
     mlflow_uri: str
+
+
+@dataclass(frozen=True)
+class CTGateConfig:
+    root_dir: Path
+    data_dir: Path
+    model_path: Path
+    params_image_size: list
+    params_batch_size: int
+    params_epochs: int
+    params_learning_rate: float
+    mlflow_uri: str
+
+
+

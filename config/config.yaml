@@ -24,4 +24,10 @@ training:
   trained_model_path: artifacts/training/model.h5
 
 evaluation:
-  mlflow_uri: 
+  mlflow_uri: https://dagshub.com/sujalvairagi/sujalvairagi-CI-CD_chest_cancer_with_vgg-16.mlflow
+
+ct_gate:
+  root_dir: artifacts/ct_gate
+  data_dir: artifacts/ct_gate/data
+  model_path: artifacts/ct_gate/ct_gate_model.h5
+  mlflow_uri: https://dagshub.com/sujalvairagi/sujalvairagi-CI-CD_chest_cancer_with_vgg-16.mlflow
