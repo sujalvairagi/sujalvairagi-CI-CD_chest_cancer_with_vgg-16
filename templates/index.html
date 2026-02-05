@@ -2,61 +2,122 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Chest Cancer Classification</title>
 
+  <!-- ✅ Bootstrap -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.min.css">
+
+  <!-- ✅ jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
   <style>
     body{
-      background:#111;
+      background:#0e0f13;
       color:#fff;
       font-family:Arial, Helvetica, sans-serif;
     }
+
     .main-container{
       margin-top:30px;
+      margin-bottom:40px;
     }
+
     .title{
       text-align:center;
-      font-size:38px;
-      font-weight:bold;
+      font-size:36px;
+      font-weight:800;
       margin-bottom:25px;
       color:#a9d2ff;
+      letter-spacing:0.5px;
     }
-    .img-part{
-      background:#222;
-      padding:20px;
-      border-radius:6px;
-      text-align:center;
-      border:1px solid #333;
+
+    .card-dark{
+      background:#15171d;
+      border:1px solid #2a2f3a;
+      border-radius:14px;
+      padding:18px;
+      box-shadow: 0px 8px 18px rgba(0,0,0,0.35);
     }
+
     .image-preview{
       width:100%;
       max-width:420px;
       border:2px solid #2b4db8;
-      border-radius:4px;
+      border-radius:12px;
     }
+
     .btn-part{
       margin-top:15px;
       display:flex;
       justify-content:center;
-      gap:20px;
+      gap:15px;
+      flex-wrap:wrap;
     }
-    .res-part{
-      background:#1b1b1b;
-      border:1px solid #333;
-      padding:20px;
-      border-radius:6px;
-      min-height:250px;
-      font-size:16px;
-    }
+
     .res-title{
       text-align:center;
-      font-size:26px;
+      font-size:22px;
       margin-bottom:15px;
+      color:#e6e6e6;
+      font-weight:700;
     }
+
     .badge-label{
-      font-size:18px;
-      padding:8px 14px;
+      font-size:16px;
+      padding:7px 12px;
+      border-radius:10px;
+    }
+
+    .metric-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:8px 0;
+      border-bottom:1px dashed #2a2f3a;
+    }
+    .metric-row:last-child{
+      border-bottom:none;
+    }
+
+    .metric-key{
+      font-weight:700;
+      color:#cfd8ff;
+    }
+    .metric-value{
+      font-weight:600;
+      color:#ffffff;
+    }
+
+    .progress{
+      height:12px;
+      border-radius:10px;
+      background:#0b0c10;
+      border:1px solid #2a2f3a;
+      overflow:hidden;
+    }
+
+    .progress-bar{
+      font-size:10px;
+      font-weight:700;
+    }
+
+    pre{
+      white-space:pre-wrap;
+      word-wrap:break-word;
+      margin:0;
+    }
+
+    .small-note{
+      color:#aaa;
+      font-size:13px;
+      margin-top:10px;
+      text-align:center;
+    }
+
+    .toggle-btn{
+      margin-top:12px;
+      width:100%;
     }
   </style>
 </head>
@@ -66,22 +127,28 @@
   <div class="title">Chest Cancer Classification</div>
 
   <div class="row">
-    <!-- LEFT SIDE -->
-    <div class="col-md-6">
-      <div class="img-part">
+    <!-- LEFT -->
+    <div class="col-md-6 mb-3">
+      <div class="card-dark text-center">
         <img id="photo" class="image-preview" src="https://i.imgur.com/3QFQW5R.png" alt="Preview">
 
         <div class="btn-part">
-          <input type="file" id="fileinput" accept="image/*" class="btn btn-primary">
+          <input type="file" id="fileinput" accept="image/*" class="form-control-file" style="color:white;">
           <button type="button" class="btn btn-success" id="predictBtn">Predict</button>
+        </div>
+
+        <div class="small-note">
+          ✅ Upload CT scan image → Predict <br>
+          🚫 Random images should be rejected by CT Gate
         </div>
       </div>
     </div>
 
-    <!-- RIGHT SIDE -->
-    <div class="col-md-6">
-      <div class="res-part">
+    <!-- RIGHT -->
+    <div class="col-md-6 mb-3">
+      <div class="card-dark">
         <div class="res-title">Prediction Results</div>
+
         <div id="resultBox">
           Upload an image and click <b>Predict</b>.
         </div>
@@ -90,13 +157,49 @@
   </div>
 </div>
 
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
 <script>
   let base64Image = "";
+  let rawVisible = false;
 
-  // Preview uploaded image
+  function labelBadge(label){
+    if(label === "cancer") return "badge-danger";
+    if(label === "normal") return "badge-success";
+    if(label === "uncertain") return "badge-warning";
+    if(label === "not_ct_scan") return "badge-info";
+    return "badge-secondary";
+  }
+
+  function gateBadge(label){
+    if(label === "CT") return "badge-primary";
+    if(label === "NON_CT") return "badge-dark";
+    return "badge-secondary";
+  }
+
+  function pct(v){
+    if(v === undefined || v === null) return "N/A";
+    return (v * 100).toFixed(2);
+  }
+
+  function safeNum(v, digits=4){
+    if(v === undefined || v === null) return "N/A";
+    return Number(v).toFixed(digits);
+  }
+
+  function renderProgress(percent, type="success"){
+    if(percent === "N/A") {
+      return `<div class="text-muted">N/A</div>`;
+    }
+    const p = Math.max(0, Math.min(100, Number(percent)));
+    return `
+      <div class="progress mt-1">
+        <div class="progress-bar bg-${type}" role="progressbar" style="width:${p}%">
+        </div>
+      </div>
+      <div style="font-size:13px; color:#ddd; margin-top:6px;">${p.toFixed(2)}%</div>
+    `;
+  }
+
+  // Preview upload
   $("#fileinput").change(function () {
     const file = this.files[0];
     if (!file) return;
@@ -105,14 +208,12 @@
     reader.onload = function (e) {
       const dataURL = e.target.result;
       $("#photo").attr("src", dataURL);
-
-      // remove "data:image/...;base64," prefix
       base64Image = dataURL.split(",")[1];
     };
     reader.readAsDataURL(file);
   });
 
-  // Predict button click
+  // Predict
   $("#predictBtn").click(function () {
     if (!base64Image) {
       $("#resultBox").html("<span class='text-warning'>⚠️ Please upload an image first.</span>");
@@ -128,27 +229,92 @@
       type: "POST",
       contentType: "application/json",
       data: payload,
+
       success: function (res) {
-        // ✅ res is a JSON object {label, confidence}
-
         const label = res.label || "unknown";
-        const conf = (res.confidence !== undefined) ? (res.confidence * 100).toFixed(2) : "N/A";
 
-        let badgeClass = "badge-secondary";
-        if (label === "cancer") badgeClass = "badge-danger";
-        if (label === "normal") badgeClass = "badge-success";
-        if (label === "uncertain") badgeClass = "badge-warning";
-        if (label === "not_ct_scan") badgeClass = "badge-info";
+        const confPct = (res.confidence !== undefined) ? pct(res.confidence) : "N/A";
+
+        const gateLbl = res.ct_gate_label || "N/A";
+        const gateConfPct = (res.ct_gate_confidence !== undefined) ? pct(res.ct_gate_confidence) : "N/A";
+
+        const gateProbNonCT = (res.gate_prob_non_ct !== undefined)
+          ? safeNum(res.gate_prob_non_ct, 4)
+          : "N/A";
+
+        // progress bar colors
+        let confBarColor = "success";
+        if(label === "cancer") confBarColor = "danger";
+        if(label === "uncertain") confBarColor = "warning";
+        if(label === "not_ct_scan") confBarColor = "info";
+
+        let gateBarColor = "primary";
+        if(gateLbl === "NON_CT") gateBarColor = "dark";
 
         $("#resultBox").html(`
           <div style="margin-top:10px;">
-            <div><b>Label:</b> <span class="badge ${badgeClass} badge-label">${label}</span></div>
-            <div style="margin-top:10px;"><b>Confidence:</b> ${conf}%</div>
-            <hr style="border-color:#333;">
-            <pre style="color:#ddd;">${JSON.stringify(res, null, 2)}</pre>
+
+            <h5 style="margin-bottom:12px; color:#a9d2ff; font-weight:800;">✅ Final Prediction</h5>
+
+            <div class="metric-row">
+              <div class="metric-key">Label</div>
+              <div class="metric-value">
+                <span class="badge ${labelBadge(label)} badge-label">${label}</span>
+              </div>
+            </div>
+
+            <div class="metric-row" style="flex-direction:column; align-items:stretch;">
+              <div style="display:flex; justify-content:space-between;">
+                <div class="metric-key">Confidence</div>
+                <div class="metric-value">${confPct === "N/A" ? "N/A" : confPct + "%"}</div>
+              </div>
+              ${renderProgress(confPct, confBarColor)}
+            </div>
+
+            <hr style="border-color:#2a2f3a; margin:18px 0;">
+
+            <h5 style="margin-bottom:12px; color:#a9d2ff; font-weight:800;">🩻 CT Gate Check</h5>
+
+            <div class="metric-row">
+              <div class="metric-key">CT Gate Label</div>
+              <div class="metric-value">
+                <span class="badge ${gateBadge(gateLbl)} badge-label">${gateLbl}</span>
+              </div>
+            </div>
+
+            <div class="metric-row" style="flex-direction:column; align-items:stretch;">
+              <div style="display:flex; justify-content:space-between;">
+                <div class="metric-key">CT Gate Confidence</div>
+                <div class="metric-value">${gateConfPct === "N/A" ? "N/A" : gateConfPct + "%"}</div>
+              </div>
+              ${renderProgress(gateConfPct, gateBarColor)}
+            </div>
+
+            <div class="metric-row">
+              <div class="metric-key">gate_prob_non_ct</div>
+              <div class="metric-value">${gateProbNonCT}</div>
+            </div>
+
+            <button class="btn btn-outline-light toggle-btn" id="toggleRawBtn">
+              ${rawVisible ? "Hide Raw JSON" : "Show Raw JSON"}
+            </button>
+
+            <div id="rawJsonBox" style="display:${rawVisible ? "block" : "none"}; margin-top:12px;">
+              <h6 style="color:#ccc; margin-bottom:8px;">🔍 Raw JSON (Debug)</h6>
+              <pre style="color:#ddd; background:#0b0c10; padding:12px; border-radius:10px; border:1px solid #2a2f3a;">${JSON.stringify(res, null, 2)}</pre>
+            </div>
+
           </div>
         `);
+
+        // toggle raw json
+        $("#toggleRawBtn").click(function(){
+          rawVisible = !rawVisible;
+          $("#rawJsonBox").css("display", rawVisible ? "block" : "none");
+          $("#toggleRawBtn").text(rawVisible ? "Hide Raw JSON" : "Show Raw JSON");
+        });
       },
+
       error: function (err) {
         $("#resultBox").html("<span class='text-danger'>❌ Prediction failed. Check server logs.</span>");
         console.log(err);
