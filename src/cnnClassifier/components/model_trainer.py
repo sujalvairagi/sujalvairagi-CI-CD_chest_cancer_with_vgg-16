@@ -5,8 +5,10 @@ from cnnClassifier.entity.config_entity import TrainingConfig
 import mlflow
 import mlflow.keras
 import mlflow.tensorflow
+from dotenv import load_dotenv
 
-# Custom callback to log metrics to MLflow epoch by epoch
+load_dotenv()
+
 class MLflowLoggingCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         if logs:
@@ -18,17 +20,15 @@ class Training:
         self.config = config
 
     def _build_model(self):
-        # Load the base model (EfficientNetB0)
         backbone = tf.keras.applications.EfficientNetB0(
             input_shape=self.config.params_image_size,
             weights=self.config.params_weights,
             include_top=False
         )
-        # Phase 1: Start with backbone frozen
         backbone.trainable = False 
         
         inputs = tf.keras.Input(shape=self.config.params_image_size)
-        x = backbone(inputs, training=False) 
+        x = backbone(inputs, training=False)
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
         x = tf.keras.layers.Dropout(0.2)(x)
         outputs = tf.keras.layers.Dense(1, activation="sigmoid")(x)
@@ -48,6 +48,7 @@ class Training:
              self.model.load_weights(str(self.config.updated_base_model_path))
 
     def train_valid_generator(self):
+        # ... (Same as before) ...
         train_dir = os.path.join(self.config.training_data, "train")
         val_dir = os.path.join(self.config.training_data, "val")
         
@@ -81,7 +82,6 @@ class Training:
         model.save_weights(str(path), save_format="h5")
 
     def train(self):
-        # 1. CONNECT TO DAGSHUB (Auto-read from config)
         mlflow.set_tracking_uri(self.config.mlflow_uri)
 
         steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
@@ -89,12 +89,11 @@ class Training:
         
         custom_callback = MLflowLoggingCallback()
 
-        with mlflow.start_run(run_name="Main_Model_EfficientNet_Training"):
-            
-            # ----------------------------------------------------------------
-            # PHASE 1: WARMUP (Train Head Only)
-            # ----------------------------------------------------------------
-            print(">>> Phase 1: Warmup (Base model frozen)...")
+        # ============================================================
+        # RUN 1: WARMUP (Head Training Only)
+        # ============================================================
+        print("\n========== STAGE 1: Head Training ==========")
+        with mlflow.start_run(run_name="Stage-1_Head_Training"):
             self.model.fit(
                 self.train_generator,
                 epochs=self.config.params_warmup_epochs,
@@ -103,39 +102,48 @@ class Training:
                 validation_steps=validation_steps,
                 callbacks=[custom_callback]
             )
+            # Save the "Head-Only" version locally in case we want it
+            self.save_model(path=Path("artifacts/training/model_head_only.h5"), model=self.model)
 
-            # ----------------------------------------------------------------
-            # PHASE 2: FINE-TUNING (Train Last N Layers)
-            # ----------------------------------------------------------------
-            print(f">>> Phase 2: Fine-tuning last {self.config.params_fine_tune_layers} layers...")
-            
-            self.model.trainable = True
-            
-            # Freeze all layers EXCEPT the last N layers
-            fine_tune_at = len(self.model.layers) - self.config.params_fine_tune_layers
-            
-            for index, layer in enumerate(self.model.layers):
-                if index < fine_tune_at:
-                    layer.trainable = False
-                
-                # Force BatchNormalization to remain frozen
-                if isinstance(layer, tf.keras.layers.BatchNormalization):
-                    layer.trainable = False
+        # ============================================================
+        # RUN 2: FINE-TUNING (Accuracy Boosting)
+        # ============================================================
+        print("\n========== STAGE 2: Fine-Tuning ==========")
+        
+        # 1. Setup Layers
+        self.model.trainable = True
+        fine_tune_at = len(self.model.layers) - self.config.params_fine_tune_layers
+        
+        for index, layer in enumerate(self.model.layers):
+            if index < fine_tune_at:
+                layer.trainable = False
+            # CRITICAL: Keep BatchNormalization frozen to prevent accuracy drops
+            if isinstance(layer, tf.keras.layers.BatchNormalization):
+                layer.trainable = False
+        
+        # 2. Recompile with SGD
+        self.model.compile(
+            optimizer=tf.keras.optimizers.SGD(learning_rate=self.config.params_fine_tune_lr, momentum=0.9),
+            loss=tf.keras.losses.BinaryCrossentropy(),
+            metrics=["accuracy"]
+        )
 
-            # Compile with SGD + Low LR
-            self.model.compile(
-                optimizer=tf.keras.optimizers.SGD(learning_rate=self.config.params_fine_tune_lr, momentum=0.9),
-                loss=tf.keras.losses.BinaryCrossentropy(),
-                metrics=["accuracy"]
-            )
+        # 3. Add Advanced Callbacks for Higher Accuracy
+        early_stopping = tf.keras.callbacks.EarlyStopping(
+            monitor='val_loss', patience=5, restore_best_weights=True
+        )
+        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+            monitor='val_loss', factor=0.2, patience=3, min_lr=1e-6
+        )
 
+        with mlflow.start_run(run_name="Stage-2_Fine_Tuning_20_Layers"):
             self.model.fit(
                 self.train_generator,
                 epochs=self.config.params_fine_tune_epochs,
                 steps_per_epoch=steps_per_epoch,
                 validation_data=self.valid_generator,
                 validation_steps=validation_steps,
-                callbacks=[custom_callback]
+                callbacks=[custom_callback, early_stopping, reduce_lr]
             )
 
         self.save_model(path=self.config.trained_model_path, model=self.model)
