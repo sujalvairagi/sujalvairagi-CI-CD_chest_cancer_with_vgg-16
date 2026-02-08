@@ -18,15 +18,17 @@ class Training:
         self.config = config
 
     def _build_model(self):
+        # Load the base model (EfficientNetB0)
         backbone = tf.keras.applications.EfficientNetB0(
             input_shape=self.config.params_image_size,
             weights=self.config.params_weights,
             include_top=False
         )
+        # Phase 1: Start with backbone frozen
         backbone.trainable = False 
         
         inputs = tf.keras.Input(shape=self.config.params_image_size)
-        x = backbone(inputs, training=False)
+        x = backbone(inputs, training=False) 
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
         x = tf.keras.layers.Dropout(0.2)(x)
         outputs = tf.keras.layers.Dense(1, activation="sigmoid")(x)
@@ -42,11 +44,13 @@ class Training:
 
     def get_base_model(self):
         self.model = self._build_model()
-        self.model.load_weights(str(self.config.updated_base_model_path))
+        if os.path.exists(self.config.updated_base_model_path):
+             self.model.load_weights(str(self.config.updated_base_model_path))
 
     def train_valid_generator(self):
         train_dir = os.path.join(self.config.training_data, "train")
         val_dir = os.path.join(self.config.training_data, "val")
+        
         datagenerator_kwargs = dict(rescale=1.0 / 255)
         dataflow_kwargs = dict(
             target_size=self.config.params_image_size[:-1],
@@ -54,10 +58,12 @@ class Training:
             interpolation="bilinear",
             class_mode="binary"
         )
+        
         valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(**datagenerator_kwargs)
         self.valid_generator = valid_datagenerator.flow_from_directory(
             directory=val_dir, shuffle=False, **dataflow_kwargs
         )
+
         if self.config.params_is_augmentation:
             train_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
                 rotation_range=40, horizontal_flip=True, width_shift_range=0.2,
@@ -65,6 +71,7 @@ class Training:
             )
         else:
             train_datagenerator = valid_datagenerator
+
         self.train_generator = train_datagenerator.flow_from_directory(
             directory=train_dir, shuffle=True, **dataflow_kwargs
         )
@@ -74,16 +81,20 @@ class Training:
         model.save_weights(str(path), save_format="h5")
 
     def train(self):
+        # 1. CONNECT TO DAGSHUB (Auto-read from config)
+        mlflow.set_tracking_uri(self.config.mlflow_uri)
+
         steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
         validation_steps = self.valid_generator.samples // self.valid_generator.batch_size
         
         custom_callback = MLflowLoggingCallback()
 
-        with mlflow.start_run(run_name="Chest_Cancer_Full_Training"):
-            # Note: self.config.all_params was removed to prevent AttributeError
+        with mlflow.start_run(run_name="Main_Model_EfficientNet_Training"):
             
-            # Phase 1: Warmup
-            print("Starting Phase 1: Warmup...")
+            # ----------------------------------------------------------------
+            # PHASE 1: WARMUP (Train Head Only)
+            # ----------------------------------------------------------------
+            print(">>> Phase 1: Warmup (Base model frozen)...")
             self.model.fit(
                 self.train_generator,
                 epochs=self.config.params_warmup_epochs,
@@ -93,11 +104,27 @@ class Training:
                 callbacks=[custom_callback]
             )
 
-            # Phase 2: Fine-tune
-            print("Starting Phase 2: Fine-tuning...")
+            # ----------------------------------------------------------------
+            # PHASE 2: FINE-TUNING (Train Last N Layers)
+            # ----------------------------------------------------------------
+            print(f">>> Phase 2: Fine-tuning last {self.config.params_fine_tune_layers} layers...")
+            
             self.model.trainable = True
+            
+            # Freeze all layers EXCEPT the last N layers
+            fine_tune_at = len(self.model.layers) - self.config.params_fine_tune_layers
+            
+            for index, layer in enumerate(self.model.layers):
+                if index < fine_tune_at:
+                    layer.trainable = False
+                
+                # Force BatchNormalization to remain frozen
+                if isinstance(layer, tf.keras.layers.BatchNormalization):
+                    layer.trainable = False
+
+            # Compile with SGD + Low LR
             self.model.compile(
-                optimizer=tf.keras.optimizers.SGD(learning_rate=self.config.params_fine_tune_lr),
+                optimizer=tf.keras.optimizers.SGD(learning_rate=self.config.params_fine_tune_lr, momentum=0.9),
                 loss=tf.keras.losses.BinaryCrossentropy(),
                 metrics=["accuracy"]
             )

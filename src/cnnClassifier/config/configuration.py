@@ -8,7 +8,6 @@ from cnnClassifier.entity.config_entity import (DataIngestionConfig,
 from cnnClassifier.entity.config_entity import CTGateConfig
 
 
-
 class ConfigurationManager:
     def __init__(
         self,
@@ -68,6 +67,9 @@ class ConfigurationManager:
         prepare_base_model = self.config.prepare_base_model
         params = self.params
         training_data = Path(self.config.data_ingestion.split_dir)
+        
+        # Borrow the URI from the evaluation config since it connects to the same Dagshub repo
+        mlflow_uri = self.config.evaluation.mlflow_uri
 
         create_directories([
             Path(training.root_dir)
@@ -88,7 +90,7 @@ class ConfigurationManager:
             params_fine_tune_layers=params.FINE_TUNE_LAYERS,
             params_warmup_lr=params.WARMUP_LR,
             params_fine_tune_lr=params.FINE_TUNE_LR,
-
+            mlflow_uri=mlflow_uri
         )
 
         return training_config
@@ -125,4 +127,3 @@ class ConfigurationManager:
             params_learning_rate=params.LEARNING_RATE,
             mlflow_uri=config.mlflow_uri
         )
-

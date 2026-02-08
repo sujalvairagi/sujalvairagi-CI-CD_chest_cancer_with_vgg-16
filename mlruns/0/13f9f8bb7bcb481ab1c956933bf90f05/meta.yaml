@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/13f9f8bb7bcb481ab1c956933bf90f05/artifacts
+end_time: 1770541500214
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 13f9f8bb7bcb481ab1c956933bf90f05
+run_name: Chest_Cancer_Full_Training
+run_uuid: 13f9f8bb7bcb481ab1c956933bf90f05
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1770541430353
+status: 3
+tags: []
+user_id: sujalvairagi

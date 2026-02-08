@@ -5,7 +5,6 @@ import mlflow
 import mlflow.keras
 
 
-
 class CTGateTrainer:
     def __init__(self, config: CTGateConfig):
         self.config = config
@@ -51,6 +50,9 @@ class CTGateTrainer:
         return model
 
     def train(self):
+        # 1. CONNECT TO DAGSHUB
+        mlflow.set_tracking_uri(self.config.mlflow_uri)
+
         train_dir = os.path.join(self.config.data_dir, "train")
         val_dir = os.path.join(self.config.data_dir, "val")
 
@@ -80,6 +82,8 @@ class CTGateTrainer:
             patience=5,
             restore_best_weights=True
         )
+        
+        # 2. Start Autologging
         mlflow.keras.autolog()
 
         model.fit(

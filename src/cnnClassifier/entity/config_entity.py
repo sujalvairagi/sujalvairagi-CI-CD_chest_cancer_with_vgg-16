@@ -15,7 +15,6 @@ class DataIngestionConfig:
     split_ratio: dict
 
 
-
 @dataclass(frozen=True)
 class PrepareBaseModelConfig:
     root_dir: Path
@@ -26,8 +25,6 @@ class PrepareBaseModelConfig:
     params_include_top: bool
     params_weights: str
     params_classes: int
-
-
 
 
 @dataclass(frozen=True)
@@ -46,7 +43,7 @@ class TrainingConfig:
     params_warmup_lr: float
     params_fine_tune_lr: float
     params_weights: str
-
+    mlflow_uri: str
 
 
 @dataclass(frozen=True)
@@ -69,6 +66,3 @@ class CTGateConfig:
     params_epochs: int
     params_learning_rate: float
     mlflow_uri: str
-
-
-

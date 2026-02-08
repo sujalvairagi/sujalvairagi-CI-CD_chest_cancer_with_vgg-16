@@ -1,17 +1,17 @@
+# ... (existing configs)
+
 AUGMENTATION: True
-IMAGE_SIZE: [224, 224, 3] # as per VGG 16 model
+IMAGE_SIZE: [224, 224, 3] # As defined in your config
 BATCH_SIZE: 16
 INCLUDE_TOP: False
-EPOCHS: 10
-
+EPOCHS: 1
 CLASSES: 2
 WEIGHTS: imagenet
-LEARNING_RATE: 0.0001
+LEARNING_RATE: 0.01
 
-
-WARMUP_EPOCHS: 3
-FINE_TUNE_EPOCHS: 3
-FINE_TUNE_LAYERS: 3
-
-WARMUP_LR: 0.001
-FINE_TUNE_LR: 0.00001
+# Fine-tuning Hyperparameters
+WARMUP_EPOCHS: 1
+FINE_TUNE_EPOCHS: 10
+WARMUP_LR: 0.001       # 1e-3
+FINE_TUNE_LR: 0.00001  # 1e-5 (Keep this very low)
+FINE_TUNE_LAYERS: 14   # NEW: Unfreeze only the last 14 layers
