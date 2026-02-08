@@ -4,6 +4,12 @@ from cnnClassifier.entity.config_entity import CTGateConfig
 import mlflow
 import mlflow.keras
 
+# 1. DEFINE THE CALLBACK (Crucial for Graphs)
+class MLflowLoggingCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        if logs:
+            for key, value in logs.items():
+                mlflow.log_metric(key, value, step=epoch)
 
 class CTGateTrainer:
     def __init__(self, config: CTGateConfig):
@@ -50,11 +56,29 @@ class CTGateTrainer:
         return model
 
     def train(self):
-        # 1. CONNECT TO DAGSHUB
+        # ------------------------------------------------------------------
+        # ROBUST CONNECTION: Check for Credentials -> Connect or Fallback
+        # ------------------------------------------------------------------
+        username = os.environ.get("MLFLOW_TRACKING_USERNAME")
+        password = os.environ.get("MLFLOW_TRACKING_PASSWORD")
+
+        if username and password:
+            # ✅ Success: Credentials found. Use Remote Dagshub URI.
+            mlflow.set_tracking_uri(self.config.mlflow_uri)
+            print(f"\n✅ Authentication Successful. Logging metrics to Dagshub: {self.config.mlflow_uri}")
+        else:
+            # ❌ Failure: Credentials missing. Switch to Local.
+            print("\n⚠️  WARNING: MLFLOW_TRACKING_USERNAME or PASSWORD not found in OS environment.")
+            print("⚠️  Authentication Failed. Switching to LOCAL tracking.")
+            print("    -> Graphs will be saved locally in the './mlruns' folder.")
+            mlflow.set_tracking_uri("") # Empty string forces local file storage
+        
+        # 1. Connect to Dagshub
         mlflow.set_tracking_uri(self.config.mlflow_uri)
 
         train_dir = os.path.join(self.config.data_dir, "train")
         val_dir = os.path.join(self.config.data_dir, "val")
+
 
         train_ds = tf.keras.utils.image_dataset_from_directory(
             directory=train_dir,
@@ -83,14 +107,27 @@ class CTGateTrainer:
             restore_best_weights=True
         )
         
-        # 2. Start Autologging
-        mlflow.keras.autolog()
+        # 2. Instantiate Callback
+        custom_callback = MLflowLoggingCallback()
 
-        model.fit(
-            train_ds,
-            validation_data=val_ds,
-            epochs=self.config.params_epochs,
-            callbacks=[early_stopping]
-        )
+        # 3. Explicit Start Run (Replacing autolog)
+        with mlflow.start_run(run_name="CT_Gate_Model_Training"):
+            
+            # A. Log Params Manually (Guaranteed to work)
+            mlflow.log_params({
+                "epochs": self.config.params_epochs,
+                "batch_size": self.config.params_batch_size,
+                "learning_rate": self.config.params_learning_rate,
+                "model_type": "Hybrid_CNN_Statistical_Gate"
+            })
+
+            # B. Train with Callback (Guaranteed to draw graphs)
+            print("Starting CT Gate Training...")
+            model.fit(
+                train_ds,
+                validation_data=val_ds,
+                epochs=self.config.params_epochs,
+                callbacks=[early_stopping, custom_callback]
+            )
 
         model.save(str(self.config.model_path))

@@ -5,7 +5,7 @@ stages:
       - src/cnnClassifier/pipeline/stage_01_data_ingestion.py
       - config/config.yaml
     outs:
-      - artifacts/data_ingestion/CT-Scan-data
+      - artifacts/data_ingestion/CT-scan-data
 
   prepare_base_model:
     cmd: python src/cnnClassifier/pipeline/stage_02_prepare_base_model.py
@@ -26,7 +26,7 @@ stages:
     deps:
       - src/cnnClassifier/pipeline/stage_03_model_trainer.py
       - config/config.yaml
-      - artifacts/data_ingestion/CT-Scan-data
+      - artifacts/data_ingestion/CT-scan-data
       - artifacts/prepare_base_model
     params:
       - IMAGE_SIZE
@@ -45,7 +45,7 @@ stages:
     deps:
       - src/cnnClassifier/pipeline/stage_04_model_evaluation.py
       - config/config.yaml
-      - artifacts/data_ingestion/CT-Scan-data
+      - artifacts/data_ingestion/CT-scan-data
       - artifacts/training/model.h5
     params:
       - IMAGE_SIZE
@@ -53,3 +53,18 @@ stages:
     metrics:
     - scores.json:
         cache: false
+
+# --- NEW STAGE: CT GATE MODEL ---
+  ct_gate_training:
+    cmd: python src/cnnClassifier/pipeline/stage_05_ct_gate_trainer.py
+    deps:
+      - src/cnnClassifier/pipeline/stage_05_ct_gate_trainer.py
+      - config/config.yaml
+      - artifacts/data_ingestion/CT-scan-data
+    params:
+      - IMAGE_SIZE
+      - BATCH_SIZE
+      - EPOCHS
+      - LEARNING_RATE
+    outs:
+      - artifacts/ct_gate/ct_gate_model.h5
