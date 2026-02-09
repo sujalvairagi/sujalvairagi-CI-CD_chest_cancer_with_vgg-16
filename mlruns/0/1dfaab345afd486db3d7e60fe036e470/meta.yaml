@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/1dfaab345afd486db3d7e60fe036e470/artifacts
+end_time: 1770594628206
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 1dfaab345afd486db3d7e60fe036e470
+run_name: Model_Evaluation
+run_uuid: 1dfaab345afd486db3d7e60fe036e470
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1770594628092
+status: 4
+tags: []
+user_id: sujalvairagi

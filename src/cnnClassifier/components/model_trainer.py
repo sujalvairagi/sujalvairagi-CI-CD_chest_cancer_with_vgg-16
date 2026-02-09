@@ -5,12 +5,8 @@ from cnnClassifier.entity.config_entity import TrainingConfig
 import mlflow
 import mlflow.keras
 import mlflow.tensorflow
+import numpy as np # <--- Import numpy
 
-
-
-
-
-# Callback to ensure Graphs appear (Logs metrics every epoch)
 class MLflowLoggingCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         if logs:
@@ -53,12 +49,18 @@ class Training:
         train_dir = os.path.join(self.config.training_data, "train")
         val_dir = os.path.join(self.config.training_data, "val")
         
+        # -------------------------------------------------------------
+        # CORRECTION: Match your ACTUAL folder name from the screenshot
+        # -------------------------------------------------------------
+        classes_list = ["normal", "adenocarcinoma"] # <--- CHANGED THIS
+        
         datagenerator_kwargs = dict(rescale=1.0 / 255)
         dataflow_kwargs = dict(
             target_size=self.config.params_image_size[:-1],
             batch_size=self.config.params_batch_size,
             interpolation="bilinear",
-            class_mode="binary"
+            class_mode="binary",
+            classes=classes_list
         )
         
         valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(**datagenerator_kwargs)
@@ -83,58 +85,45 @@ class Training:
         model.save_weights(str(path), save_format="h5")
 
     def train(self):
-        # ------------------------------------------------------------------
-        # ROBUST CONNECTION: Check for Credentials -> Connect or Fallback
-        # ------------------------------------------------------------------
+        # ... (Authentication code remains same) ...
         username = os.environ.get("MLFLOW_TRACKING_USERNAME")
         password = os.environ.get("MLFLOW_TRACKING_PASSWORD")
-
         if username and password:
-            # ✅ Success: Credentials found. Use Remote Dagshub URI.
             mlflow.set_tracking_uri(self.config.mlflow_uri)
-            print(f"\n✅ Authentication Successful. Logging metrics to Dagshub: {self.config.mlflow_uri}")
         else:
-            # ❌ Failure: Credentials missing. Switch to Local.
-            print("\n⚠️  WARNING: MLFLOW_TRACKING_USERNAME or PASSWORD not found in OS environment.")
-            print("⚠️  Authentication Failed. Switching to LOCAL tracking.")
-            print("    -> Graphs will be saved locally in the './mlruns' folder.")
-            mlflow.set_tracking_uri("") # Empty string forces local file storage
-        
-        mlflow.set_tracking_uri(self.config.mlflow_uri)
+            mlflow.set_tracking_uri("")
 
         steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
         validation_steps = self.valid_generator.samples // self.valid_generator.batch_size
         
         custom_callback = MLflowLoggingCallback()
 
-        # ============================================================
-        # RUN 1: WARMUP (Head Training Only)
-        # ============================================================
+        # -------------------------------------------------------------
+        # FORCE MANUAL WEIGHTS
+        # -------------------------------------------------------------
+        # Normal (0) gets 5.0 importance, Cancer (1) gets 1.0 importance
+        class_weights = {0: 5.0, 1: 1.0}
+        print(f"\n⚖️ APPLIED MANUAL WEIGHTS: {class_weights}")
+
         print("\n========== STAGE 1: Head Training ==========")
         with mlflow.start_run(run_name="Stage-1_Head_Training"):
-            # 1. LOG PARAMS (FIXED)
             mlflow.log_params({
                 "epochs": self.config.params_warmup_epochs,
-                "learning_rate": self.config.params_warmup_lr,
-                "batch_size": self.config.params_batch_size,
-                "phase": "Warmup (Head Only)"
+                "phase": "Warmup",
+                "manual_class_weights": str(class_weights)
             })
-            
             self.model.fit(
                 self.train_generator,
                 epochs=self.config.params_warmup_epochs,
                 steps_per_epoch=steps_per_epoch,
                 validation_data=self.valid_generator,
                 validation_steps=validation_steps,
-                callbacks=[custom_callback]
+                callbacks=[custom_callback],
+                class_weight=class_weights # <--- Weights Applied
             )
             self.save_model(path=Path("artifacts/training/model_head_only.h5"), model=self.model)
 
-        # ============================================================
-        # RUN 2: FINE-TUNING (Accuracy Boosting)
-        # ============================================================
         print("\n========== STAGE 2: Fine-Tuning ==========")
-        
         self.model.trainable = True
         fine_tune_at = len(self.model.layers) - self.config.params_fine_tune_layers
         
@@ -150,29 +139,23 @@ class Training:
             metrics=["accuracy"]
         )
 
-        early_stopping = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', patience=5, restore_best_weights=True
-        )
-        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
-            monitor='val_loss', factor=0.2, patience=3, min_lr=1e-6
-        )
+        early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=1e-6)
 
         with mlflow.start_run(run_name="Stage-2_Fine_Tuning"):
-            # 1. LOG PARAMS (FIXED)
             mlflow.log_params({
                 "epochs": self.config.params_fine_tune_epochs,
-                "learning_rate": self.config.params_fine_tune_lr,
-                "fine_tune_layers": self.config.params_fine_tune_layers,
-                "phase": "Fine-Tuning"
+                "phase": "Fine-Tuning",
+                "manual_class_weights": str(class_weights)
             })
-
             self.model.fit(
                 self.train_generator,
                 epochs=self.config.params_fine_tune_epochs,
                 steps_per_epoch=steps_per_epoch,
                 validation_data=self.valid_generator,
                 validation_steps=validation_steps,
-                callbacks=[custom_callback, early_stopping, reduce_lr]
+                callbacks=[custom_callback, early_stopping, reduce_lr],
+                class_weight=class_weights # <--- Weights Applied
             )
 
         self.save_model(path=self.config.trained_model_path, model=self.model)

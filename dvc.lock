@@ -86,23 +86,23 @@ stages:
   evaluation:
     cmd: python src/cnnClassifier/pipeline/stage_04_model_evaluation.py
     deps:
-    - path: artifacts/data_ingestion/CT-Scan-data
+    - path: artifacts/data_ingestion/CT-scan-data
       hash: md5
-      md5: 63e6b4d2e81c78b8add2cc29b4db5b40.dir
+      md5: 804029e56172360b15d24e1b17752dd7.dir
       size: 187178008
       nfiles: 1568
     - path: artifacts/training/model.h5
       hash: md5
-      md5: cbf2077f89cd82e4550a32b4d6331678
+      md5: 0f7bcae5f9c51e544410cb2b2954d477
       size: 16476808
     - path: config/config.yaml
       hash: md5
-      md5: 822934b8b20608e8e2773f0513789d0f
-      size: 1204
+      md5: 827f7e69e311c322e2ffc2b8632fd8d3
+      size: 1172
     - path: src/cnnClassifier/pipeline/stage_04_model_evaluation.py
       hash: md5
-      md5: 240f94ae8fba1de80150d4807b535cb6
-      size: 913
+      md5: edadfb2d9dda6a9b2eb15d8ebcb5c282
+      size: 879
     params:
       params.yaml:
         BATCH_SIZE: 16
@@ -113,5 +113,35 @@ stages:
     outs:
     - path: scores.json
       hash: md5
-      md5: 497486a762987bbbec94f6c3878ae020
-      size: 282
+      md5: a8f3bc4c0d4dc7c22ce110685ea35c4b
+      size: 169
+  ct_gate_training:
+    cmd: python src/cnnClassifier/pipeline/stage_05_ct_gate_trainer.py
+    deps:
+    - path: artifacts/data_ingestion/CT-scan-data
+      hash: md5
+      md5: 804029e56172360b15d24e1b17752dd7.dir
+      size: 187178008
+      nfiles: 1568
+    - path: config/config.yaml
+      hash: md5
+      md5: 827f7e69e311c322e2ffc2b8632fd8d3
+      size: 1172
+    - path: src/cnnClassifier/pipeline/stage_05_ct_gate_trainer.py
+      hash: md5
+      md5: a8baf8829f762da4ca850869cb593164
+      size: 1060
+    params:
+      params.yaml:
+        BATCH_SIZE: 16
+        EPOCHS: 1
+        IMAGE_SIZE:
+        - 224
+        - 224
+        - 3
+        LEARNING_RATE: 0.01
+    outs:
+    - path: artifacts/ct_gate/ct_gate_model.h5
+      hash: md5
+      md5: 608330bb9e468240f0c2a2567f22bb33
+      size: 392480
