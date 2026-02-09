@@ -10,6 +10,7 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from cnnClassifier.utils.common import save_json, load_json # Import load_json
 
 class Evaluation:
     def __init__(self, config: EvaluationConfig):
@@ -129,25 +130,42 @@ class Evaluation:
         }
 
     def save_score(self):
-        # This is what gets saved to scores.json
-        scores = {
-            "loss": float(self.score[0]),
-            "accuracy": self.advanced_metrics["accuracy_manual"],
-            "precision": self.advanced_metrics["precision"],
-            "recall": self.advanced_metrics["recall"],
-            "f1_score": self.advanced_metrics["f1_score"],
-            "auc_roc": self.advanced_metrics["auc_roc"],
-            "threshold": self.advanced_metrics["optimal_threshold"],
-            # --- NEW FIELDS ---
-            "total_normal_images": self.advanced_metrics["counts"]["total_normal"],
-            "total_cancer_images": self.advanced_metrics["counts"]["total_cancer"],
-            "true_positives": self.advanced_metrics["counts"]["tp"],
-            "false_positives": self.advanced_metrics["counts"]["fp"],
-            "true_negatives": self.advanced_metrics["counts"]["tn"],
-            "false_negatives": self.advanced_metrics["counts"]["fn"]
-        }
-        save_json(path=Path("scores.json"), data=scores)
+            # 1. Load the Temp Training Scores from Stage 3 (if they exist)
+            training_scores = {}
+            try:
+                training_scores = load_json(Path("artifacts/training/temp_train_scores.json"))
+            except Exception:
+                print("⚠️ Could not find temp_train_scores.json. Skipping training metrics.")
 
+            # 2. Prepare the Evaluation Scores
+            eval_scores = {
+                "test_loss": float(self.score[0]),
+                "test_accuracy": self.advanced_metrics["accuracy_manual"],
+                "test_precision": self.advanced_metrics["precision"],
+                "test_recall": self.advanced_metrics["recall"],
+                "test_f1_score": self.advanced_metrics["f1_score"],
+                "test_auc_roc": self.advanced_metrics["auc_roc"],
+                "test_optimal_threshold": self.advanced_metrics["optimal_threshold"],
+                
+                # --- COUNTS (Complete Breakdown) ---
+                "test_total_normal": self.advanced_metrics["counts"]["total_normal"],
+                "test_total_cancer": self.advanced_metrics["counts"]["total_cancer"],
+                
+                "test_true_positives": self.advanced_metrics["counts"]["tp"], # Cancer Correctly Found
+                "test_false_negatives": self.advanced_metrics["counts"]["fn"], # Cancer Missed (Critical)
+                "test_true_negatives": self.advanced_metrics["counts"]["tn"], # Normal Correctly Found <--- ADDED
+                "test_false_positives": self.advanced_metrics["counts"]["fp"]  # Normal Wrongly Flagged <--- ADDED
+            }
+
+            # 3. MERGE BOTH (Training + Evaluation)
+            final_scores = {**training_scores, **eval_scores}
+            
+            # 4. Save to scores.json
+            save_json(path=Path("scores.json"), data=final_scores)
+            print("\n✅ Evaluation & Training scores merged into scores.json")
+   
+   
+   
     def log_into_mlflow(self):
         # ... (Authentication code remains same) ...
         username = os.environ.get("MLFLOW_TRACKING_USERNAME")

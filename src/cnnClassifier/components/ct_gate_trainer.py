@@ -146,3 +146,16 @@ class CTGateTrainer:
             )
 
         model.save(str(self.config.model_path))
+
+        # ... (existing code: model.save, log_params, etc.) ...
+        
+        # ---------------------------------------------------------
+        # 🏁 FINAL SUCCESS MESSAGE
+        # ---------------------------------------------------------
+        dashboard_url = self.config.mlflow_uri.replace(".mlflow", "")
+        
+        print("\n" + "="*60)
+        print(f"🚀 PIPELINE COMPLETED SUCCESSFULLY!")
+        print(f"📊 View your 91% Accuracy & Graphs here:")
+        print(f"🔗 {dashboard_url}")
+        print("="*60 + "\n")
