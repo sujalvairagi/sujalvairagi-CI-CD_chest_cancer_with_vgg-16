@@ -5,8 +5,8 @@ stages:
     deps:
     - path: config/config.yaml
       hash: md5
-      md5: 827f7e69e311c322e2ffc2b8632fd8d3
-      size: 1172
+      md5: 6b7b41337ea215fb5a17c330b00f1ebc
+      size: 1169
     - path: src/cnnClassifier/pipeline/stage_01_data_ingestion.py
       hash: md5
       md5: dd177e87d05cc361064ac7224bd8846d
@@ -14,16 +14,16 @@ stages:
     outs:
     - path: artifacts/data_ingestion/CT-scan-data
       hash: md5
-      md5: 804029e56172360b15d24e1b17752dd7.dir
-      size: 187178008
-      nfiles: 1568
+      md5: f46669226931cc95c1003627c097c36d.dir
+      size: 152382892
+      nfiles: 1144
   prepare_base_model:
     cmd: python src/cnnClassifier/pipeline/stage_02_prepare_base_model.py
     deps:
     - path: config/config.yaml
       hash: md5
-      md5: 827f7e69e311c322e2ffc2b8632fd8d3
-      size: 1172
+      md5: 6b7b41337ea215fb5a17c330b00f1ebc
+      size: 1169
     - path: src/cnnClassifier/pipeline/stage_02_prepare_base_model.py
       hash: md5
       md5: 81cbb3ca39daf4c404c955f15b6c2942
@@ -41,7 +41,7 @@ stages:
     outs:
     - path: artifacts/prepare_base_model
       hash: md5
-      md5: 7526eeca85c0e2e81d37543e786ea32a.dir
+      md5: a26ee826d5c34b593142e8d49a5100f2.dir
       size: 16476400
       nfiles: 1
   training:
@@ -49,18 +49,18 @@ stages:
     deps:
     - path: artifacts/data_ingestion/CT-scan-data
       hash: md5
-      md5: 804029e56172360b15d24e1b17752dd7.dir
-      size: 187178008
-      nfiles: 1568
+      md5: f46669226931cc95c1003627c097c36d.dir
+      size: 152382892
+      nfiles: 1144
     - path: artifacts/prepare_base_model
       hash: md5
-      md5: 7526eeca85c0e2e81d37543e786ea32a.dir
+      md5: a26ee826d5c34b593142e8d49a5100f2.dir
       size: 16476400
       nfiles: 1
     - path: config/config.yaml
       hash: md5
-      md5: 827f7e69e311c322e2ffc2b8632fd8d3
-      size: 1172
+      md5: 6b7b41337ea215fb5a17c330b00f1ebc
+      size: 1169
     - path: src/cnnClassifier/pipeline/stage_03_model_trainer.py
       hash: md5
       md5: c33e23d2c123f157b2ab007c8e9d938f
@@ -81,24 +81,24 @@ stages:
     outs:
     - path: artifacts/training/model.h5
       hash: md5
-      md5: 0f7bcae5f9c51e544410cb2b2954d477
+      md5: 48a95563d97c7a5541f9dc6c5011b9c7
       size: 16476808
   evaluation:
     cmd: python src/cnnClassifier/pipeline/stage_04_model_evaluation.py
     deps:
     - path: artifacts/data_ingestion/CT-scan-data
       hash: md5
-      md5: 804029e56172360b15d24e1b17752dd7.dir
-      size: 187178008
-      nfiles: 1568
+      md5: f46669226931cc95c1003627c097c36d.dir
+      size: 152382892
+      nfiles: 1144
     - path: artifacts/training/model.h5
       hash: md5
-      md5: 0f7bcae5f9c51e544410cb2b2954d477
+      md5: 48a95563d97c7a5541f9dc6c5011b9c7
       size: 16476808
     - path: config/config.yaml
       hash: md5
-      md5: 827f7e69e311c322e2ffc2b8632fd8d3
-      size: 1172
+      md5: 6b7b41337ea215fb5a17c330b00f1ebc
+      size: 1169
     - path: src/cnnClassifier/pipeline/stage_04_model_evaluation.py
       hash: md5
       md5: edadfb2d9dda6a9b2eb15d8ebcb5c282
@@ -113,20 +113,20 @@ stages:
     outs:
     - path: scores.json
       hash: md5
-      md5: a8f3bc4c0d4dc7c22ce110685ea35c4b
-      size: 169
+      md5: c849b5c3d371614f020f549a1efc5c5a
+      size: 167
   ct_gate_training:
     cmd: python src/cnnClassifier/pipeline/stage_05_ct_gate_trainer.py
     deps:
     - path: artifacts/data_ingestion/CT-scan-data
       hash: md5
-      md5: 804029e56172360b15d24e1b17752dd7.dir
-      size: 187178008
-      nfiles: 1568
+      md5: f46669226931cc95c1003627c097c36d.dir
+      size: 152382892
+      nfiles: 1144
     - path: config/config.yaml
       hash: md5
-      md5: 827f7e69e311c322e2ffc2b8632fd8d3
-      size: 1172
+      md5: 6b7b41337ea215fb5a17c330b00f1ebc
+      size: 1169
     - path: src/cnnClassifier/pipeline/stage_05_ct_gate_trainer.py
       hash: md5
       md5: a8baf8829f762da4ca850869cb593164
@@ -143,5 +143,5 @@ stages:
     outs:
     - path: artifacts/ct_gate/ct_gate_model.h5
       hash: md5
-      md5: 608330bb9e468240f0c2a2567f22bb33
+      md5: 05fa80492fa4611e06a91c40cd821723
       size: 392480

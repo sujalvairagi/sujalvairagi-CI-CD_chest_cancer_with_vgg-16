@@ -6,6 +6,22 @@ import mlflow
 import mlflow.keras
 import mlflow.tensorflow
 import numpy as np # <--- Import numpy
+import os
+import warnings
+import logging
+
+# 1. Suppress TensorFlow Logs (0 = all, 1 = no INFO, 2 = no INFO/WARN, 3 = no INFO/WARN/ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
+# 2. Suppress Python Warnings
+warnings.filterwarnings("ignore")
+
+# 3. Suppress specific libraries
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
+logging.getLogger("mlflow").setLevel(logging.ERROR)
+
+# ... (rest of your imports) ...
+import tensorflow as tf
 
 class MLflowLoggingCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):

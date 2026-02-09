@@ -10,7 +10,22 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import os
+import warnings
+import logging
 
+# 1. Suppress TensorFlow Logs (0 = all, 1 = no INFO, 2 = no INFO/WARN, 3 = no INFO/WARN/ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
+# 2. Suppress Python Warnings
+warnings.filterwarnings("ignore")
+
+# 3. Suppress specific libraries
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
+logging.getLogger("mlflow").setLevel(logging.ERROR)
+
+# ... (rest of your imports) ...
+import tensorflow as tf
 class Evaluation:
     def __init__(self, config: EvaluationConfig):
         self.config = config
