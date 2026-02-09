@@ -1,8 +1,15 @@
 {
     "loss": 0.7372602224349976,
-    "accuracy": 0.28409090638160706,
-    "precision": 0.0,
-    "recall": 0.0,
-    "f1_score": 0.0,
-    "auc_roc": 0.9415873015873016
+    "accuracy": 0.9090909090909091,
+    "precision": 0.9508196721311475,
+    "recall": 0.9206349206349206,
+    "f1_score": 0.9354838709677419,
+    "auc_roc": 0.9415873015873016,
+    "threshold": 0.45329225063323975,
+    "total_normal_images": 25,
+    "total_cancer_images": 63,
+    "true_positives": 58,
+    "false_positives": 3,
+    "true_negatives": 22,
+    "false_negatives": 5
 }
