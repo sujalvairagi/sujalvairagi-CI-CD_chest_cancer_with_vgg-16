@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/736ffaecdeed45db9974c138a2f1e189/artifacts
+end_time: 1770645939675
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 736ffaecdeed45db9974c138a2f1e189
+run_name: Stage-2_Fine_Tuning
+run_uuid: 736ffaecdeed45db9974c138a2f1e189
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1770645803115
+status: 3
+tags: []
+user_id: sujalvairagi

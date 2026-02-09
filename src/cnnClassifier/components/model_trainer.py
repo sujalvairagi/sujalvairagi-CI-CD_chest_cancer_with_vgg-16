@@ -5,23 +5,16 @@ from cnnClassifier.entity.config_entity import TrainingConfig
 import mlflow
 import mlflow.keras
 import mlflow.tensorflow
-import numpy as np # <--- Import numpy
-import os
+import numpy as np
 import warnings
 import logging
+from sklearn.utils import class_weight
 
-# 1. Suppress TensorFlow Logs (0 = all, 1 = no INFO, 2 = no INFO/WARN, 3 = no INFO/WARN/ERROR)
+# Suppress logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-
-# 2. Suppress Python Warnings
 warnings.filterwarnings("ignore")
-
-# 3. Suppress specific libraries
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 logging.getLogger("mlflow").setLevel(logging.ERROR)
-
-# ... (rest of your imports) ...
-import tensorflow as tf
 
 class MLflowLoggingCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
@@ -65,10 +58,7 @@ class Training:
         train_dir = os.path.join(self.config.training_data, "train")
         val_dir = os.path.join(self.config.training_data, "val")
         
-        # -------------------------------------------------------------
-        # CORRECTION: Match your ACTUAL folder name from the screenshot
-        # -------------------------------------------------------------
-        classes_list = ["normal", "adenocarcinoma"] # <--- CHANGED THIS
+        classes_list = ["normal", "adenocarcinoma"]
         
         datagenerator_kwargs = dict(rescale=1.0 / 255)
         dataflow_kwargs = dict(
@@ -100,8 +90,60 @@ class Training:
     def save_model(path: Path, model: tf.keras.Model):
         model.save_weights(str(path), save_format="h5")
 
+    def _calculate_class_weights(self):
+        """
+        Calculate balanced class weights OR apply medical AI best practices
+        
+        Options:
+        1. Balanced (sklearn): Automatically balances based on class frequency
+        2. Conservative Medical: Favor sensitivity (detecting cancer) over specificity
+        """
+        
+        # Get class distribution from training data
+        class_counts = self.train_generator.classes
+        unique_classes, counts = np.unique(class_counts, return_counts=True)
+        
+        print("\n" + "="*60)
+        print("CLASS DISTRIBUTION IN TRAINING DATA:")
+        print(f"  Class 0 (Normal):        {counts[0]} images")
+        print(f"  Class 1 (Adenocarcinoma): {counts[1]} images")
+        print("="*60)
+        
+        # OPTION 1: Balanced weights (sklearn method)
+        class_weights_array = class_weight.compute_class_weight(
+            'balanced',
+            classes=unique_classes,
+            y=class_counts
+        )
+        balanced_weights = {i: class_weights_array[i] for i in range(len(class_weights_array))}
+        
+        print(f"\nCALCULATED BALANCED WEIGHTS: {balanced_weights}")
+        
+        # OPTION 2: Medical AI Conservative (Favor Cancer Detection)
+        # In medical AI, False Negatives (missing cancer) are more dangerous than False Positives
+        # So we give MORE weight to the minority class (usually cancer)
+        
+        if counts[1] < counts[0]:  # If cancer is minority
+            # Give cancer 2-3x more importance
+            conservative_weights = {
+                0: 1.0,  # Normal
+                1: min(3.0, counts[0] / counts[1])  # Cancer (capped at 3x)
+            }
+            print(f"CONSERVATIVE MEDICAL WEIGHTS: {conservative_weights}")
+            print("  → Prioritizes detecting cancer (higher sensitivity)")
+            
+            # Use conservative weights for medical applications
+            final_weights = conservative_weights
+        else:
+            final_weights = balanced_weights
+        
+        print(f"\nâœ… SELECTED WEIGHTS: {final_weights}")
+        print("="*60 + "\n")
+        
+        return final_weights
+
     def train(self):
-        # ... (Authentication code remains same) ...
+        # Authentication
         username = os.environ.get("MLFLOW_TRACKING_USERNAME")
         password = os.environ.get("MLFLOW_TRACKING_PASSWORD")
         if username and password:
@@ -114,19 +156,15 @@ class Training:
         
         custom_callback = MLflowLoggingCallback()
 
-        # -------------------------------------------------------------
-        # FORCE MANUAL WEIGHTS
-        # -------------------------------------------------------------
-        # Normal (0) gets 5.0 importance, Cancer (1) gets 1.0 importance
-        class_weights = {0: 5.0, 1: 1.0}
-        print(f"\n⚖️ APPLIED MANUAL WEIGHTS: {class_weights}")
+        # CALCULATE PROPER CLASS WEIGHTS
+        class_weights = self._calculate_class_weights()
 
         print("\n========== STAGE 1: Head Training ==========")
         with mlflow.start_run(run_name="Stage-1_Head_Training"):
             mlflow.log_params({
                 "epochs": self.config.params_warmup_epochs,
                 "phase": "Warmup",
-                "manual_class_weights": str(class_weights)
+                "class_weights": str(class_weights)
             })
             self.model.fit(
                 self.train_generator,
@@ -135,7 +173,7 @@ class Training:
                 validation_data=self.valid_generator,
                 validation_steps=validation_steps,
                 callbacks=[custom_callback],
-                class_weight=class_weights # <--- Weights Applied
+                class_weight=class_weights
             )
             self.save_model(path=Path("artifacts/training/model_head_only.h5"), model=self.model)
 
@@ -162,7 +200,7 @@ class Training:
             mlflow.log_params({
                 "epochs": self.config.params_fine_tune_epochs,
                 "phase": "Fine-Tuning",
-                "manual_class_weights": str(class_weights)
+                "class_weights": str(class_weights)
             })
             self.model.fit(
                 self.train_generator,
@@ -171,7 +209,8 @@ class Training:
                 validation_data=self.valid_generator,
                 validation_steps=validation_steps,
                 callbacks=[custom_callback, early_stopping, reduce_lr],
-                class_weight=class_weights # <--- Weights Applied
+                class_weight=class_weights
             )
 
         self.save_model(path=self.config.trained_model_path, model=self.model)
+        print("\n✅ Training completed successfully!")

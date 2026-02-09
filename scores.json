@@ -1,15 +1,15 @@
 {
-    "test_loss": 0.7179885506629944,
-    "test_accuracy": 0.8977272727272727,
-    "test_precision": 0.9655172413793104,
-    "test_recall": 0.8888888888888888,
-    "test_f1_score": 0.9256198347107438,
-    "test_auc_roc": 0.9707936507936508,
-    "test_optimal_threshold": 0.47193410992622375,
+    "test_loss": 0.6794440746307373,
+    "test_accuracy": 0.9204545454545454,
+    "test_precision": 0.9516129032258065,
+    "test_recall": 0.9365079365079365,
+    "test_f1_score": 0.944,
+    "test_auc_roc": 0.966984126984127,
+    "test_optimal_threshold": 0.5160435438156128,
     "test_total_normal": 25,
     "test_total_cancer": 63,
-    "test_true_positives": 56,
-    "test_false_negatives": 7,
-    "test_true_negatives": 23,
-    "test_false_positives": 2
+    "test_true_positives": 59,
+    "test_false_negatives": 4,
+    "test_true_negatives": 22,
+    "test_false_positives": 3
 }

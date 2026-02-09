@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/0/7a95c5b391d9423b87d62fd3e554506c/artifacts
+end_time: 1770645803095
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 7a95c5b391d9423b87d62fd3e554506c
+run_name: Stage-1_Head_Training
+run_uuid: 7a95c5b391d9423b87d62fd3e554506c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1770645761949
+status: 3
+tags: []
+user_id: sujalvairagi

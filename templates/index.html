@@ -36,6 +36,14 @@
         .logo{position:absolute;right:0px;bottom:0px;margin-right:30px;margin-bottom:30px;}
         .badge-lg { font-size: 1.1rem; padding: 8px 15px; width: 100%; margin-bottom: 10px; display: block; }
         .raw-values { font-size: 12px; color: #666; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }
+        .threshold-info { 
+            font-size: 11px; 
+            color: #888; 
+            margin-top: 8px; 
+            font-style: italic;
+            border-left: 3px solid #17a2b8;
+            padding-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -96,82 +104,148 @@ function sendRequest(base64Data){
             },
             data:JSON.stringify({image:base64Data}),
             success: function(res){
-                $(".res-part").html("");
-                $("#loading").hide();
+                try {
+                    $(".res-part").html("");
+                    $("#loading").hide();
 
-                var probPct = (res.probability * 100).toFixed(2);
-                
-                // Format Raw Values for Display
-                var gateP = res.gate_p.toFixed(5);
-                var cancerP = (res.cancer_p !== null) ? res.cancer_p.toFixed(5) : "N/A";
+                    // ✅ FIX: Validate response has required fields
+                    if (!res || typeof res.probability === 'undefined') {
+                        throw new Error("Invalid response format");
+                    }
 
-                // CASE 1: Not a CT Scan
-                if (res.is_ct === false) {
-                    $(".res-part").html(`
-                        <div class="text-center pt-5">
-                            <h4 class="text-info font-weight-bold">🚫 ${res.label}</h4>
-                            <p class="mt-3" style="font-size:16px;">
-                                Probability of NOT being a CT: <b style="color:#17a2b8;">${probPct}%</b>
-                            </p>
-                            <small class="text-muted">Please upload a valid chest CT scan.</small>
-                            
-                            <div class="raw-values text-left">
-                                <strong>Raw Model Outputs:</strong><br>
-                                Gate Model (p_non_ct): ${gateP}<br>
-                                Cancer Model (p_cancer): Skipped
-                            </div>
-                        </div>
-                    `);
-                } 
-                // CASE 2: Valid CT Scan
-                else {
-                    var badgeClass = "badge-success"; 
-                    var barClass = "bg-success";
+                    var probPct = (res.probability * 100).toFixed(2);
                     
-                    if (res.label.includes("Adenocarcinoma")) {
-                        badgeClass = "badge-danger";
-                        barClass = "bg-danger";
-                    }
-                    if (res.label.includes("uncertainty")) {
-                        badgeClass = "badge-warning";
-                        barClass = "bg-warning";
-                    }
+                    // ✅ FIX: Safe field access with defaults
+                    var gateP = (res.gate_p !== undefined && res.gate_p !== null) 
+                        ? res.gate_p.toFixed(5) 
+                        : "N/A";
+                    var cancerP = (res.cancer_p !== null && res.cancer_p !== undefined) 
+                        ? res.cancer_p.toFixed(5) 
+                        : "N/A";
+                    
+                    // ✅ NEW: Extract threshold if available (for fixed prediction.py)
+                    var thresholdUsed = res.threshold_used 
+                        ? res.threshold_used.toFixed(4) 
+                        : null;
 
-                    $(".res-part").html(`
-                        <div style="padding: 20px;">
-                            <h6 class="text-muted text-uppercase mb-3">Diagnosis Report</h6>
-                            
-                            <span class="badge ${badgeClass} badge-lg">${res.label}</span>
-                            
-                            <div class="mt-4">
-                                <div class="d-flex justify-content-between">
-                                    <span class="font-weight-bold">Model Confidence</span>
-                                    <span class="font-weight-bold">${probPct}%</span>
+                    // CASE 1: Not a CT Scan
+                    if (res.is_ct === false) {
+                        $(".res-part").html(`
+                            <div class="text-center pt-5">
+                                <h4 class="text-info font-weight-bold">🚫 ${res.label}</h4>
+                                <p class="mt-3" style="font-size:16px;">
+                                    Probability of NOT being a CT: <b style="color:#17a2b8;">${probPct}%</b>
+                                </p>
+                                <small class="text-muted">Please upload a valid chest CT scan.</small>
+                                
+                                <div class="raw-values text-left">
+                                    <strong>Raw Model Outputs:</strong><br>
+                                    Gate Model (p_non_ct): ${gateP}<br>
+                                    Cancer Model (p_cancer): Skipped
                                 </div>
-                                <div class="progress mt-2" style="height: 20px;">
-                                    <div class="progress-bar ${barClass}" role="progressbar" 
-                                         style="width: ${probPct}%" aria-valuenow="${probPct}" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        `);
+                    } 
+                    // CASE 2: Valid CT Scan
+                    else {
+                        var badgeClass = "badge-success"; 
+                        var barClass = "bg-success";
+                        
+                        // ✅ FIX: Case-insensitive check for Adenocarcinoma
+                        if (res.label.toLowerCase().includes("adenocarcinoma")) {
+                            badgeClass = "badge-danger";
+                            barClass = "bg-danger";
+                        }
+                        
+                        // ✅ FIX: Case-insensitive check for Uncertain (capital U)
+                        if (res.label.toLowerCase().includes("uncertain") || 
+                            res.label.toLowerCase().includes("borderline")) {
+                            badgeClass = "badge-warning";
+                            barClass = "bg-warning";
+                        }
+
+                        // ✅ NEW: Build threshold display if available
+                        var thresholdDisplay = "";
+                        if (thresholdUsed) {
+                            thresholdDisplay = `
+                                <div class="threshold-info">
+                                    ℹ️ Decision threshold: ${thresholdUsed} (scientifically optimized)
+                                </div>
+                            `;
+                        }
+
+                        // ✅ IMPROVED: Better confidence explanation
+                        var confidenceLabel = "Model Confidence";
+                        if (res.label.toLowerCase().includes("normal")) {
+                            confidenceLabel = "Confidence: Normal";
+                        } else if (res.label.toLowerCase().includes("adenocarcinoma")) {
+                            confidenceLabel = "Confidence: Cancer Detected";
+                        }
+
+                        $(".res-part").html(`
+                            <div style="padding: 20px;">
+                                <h6 class="text-muted text-uppercase mb-3">Diagnosis Report</h6>
+                                
+                                <span class="badge ${badgeClass} badge-lg">${res.label}</span>
+                                
+                                <div class="mt-4">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="font-weight-bold">${confidenceLabel}</span>
+                                        <span class="font-weight-bold">${probPct}%</span>
                                     </div>
+                                    <div class="progress mt-2" style="height: 20px;">
+                                        <div class="progress-bar ${barClass}" role="progressbar" 
+                                             style="width: ${probPct}%" aria-valuenow="${probPct}" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    ${thresholdDisplay}
+                                </div>
+
+                                <hr class="mt-4">
+                                <div class="alert alert-light border text-center mb-0">
+                                    <small>✅ Validated by CT Gate Check</small>
+                                </div>
+
+                                <div class="raw-values">
+                                    <strong>Raw Model Outputs:</strong><br>
+                                    Gate Model (p_non_ct): ${gateP}<br>
+                                    Cancer Model (p_cancer): ${cancerP}
+                                    ${thresholdUsed ? '<br>Threshold Used: ' + thresholdUsed : ''}
                                 </div>
                             </div>
-
-                            <hr class="mt-4">
-                            <div class="alert alert-light border text-center mb-0">
-                                <small>✅ Validated by CT Gate Check</small>
-                            </div>
-
-                            <div class="raw-values">
-                                <strong>Raw Model Outputs:</strong><br>
-                                Gate Model (p_non_ct): ${gateP}<br>
-                                Cancer Model (p_cancer): ${cancerP}
-                            </div>
-                        </div>
+                        `);
+                    }
+                } catch (error) {
+                    // ✅ NEW: Better error handling
+                    console.error("Error processing response:", error);
+                    $("#loading").hide();
+                    $(".res-part").html(`
+                        <p class='text-danger text-center pt-5'>
+                            Error processing prediction result.<br>
+                            <small>${error.message}</small>
+                        </p>
                     `);
                 }
             },
             error: function(err){
                 $("#loading").hide();
-                $(".res-part").html("<p class='text-danger text-center pt-5'>Something went wrong. Please try again.</p>");
+                
+                // ✅ IMPROVED: Better error messages
+                var errorMsg = "Something went wrong. Please try again.";
+                if (err.status === 500) {
+                    errorMsg = "Server error. Please check if the model is loaded correctly.";
+                } else if (err.status === 400) {
+                    errorMsg = "Invalid image format. Please upload a valid image.";
+                } else if (err.status === 0) {
+                    errorMsg = "Cannot connect to server. Is the Flask app running?";
+                }
+                
+                $(".res-part").html(`
+                    <p class='text-danger text-center pt-5'>
+                        ${errorMsg}<br>
+                        <small class="text-muted">Status: ${err.status} ${err.statusText}</small>
+                    </p>
+                `);
             }
         });
     }
@@ -181,6 +255,10 @@ $(document).ready(function(){
     $("#loading").hide();
 
     $('#send').click(function(evt){
+        if (!base_data) {
+            alert("Please upload an image first!");
+            return;
+        }
         sendRequest(base_data);
     });
 
