@@ -213,4 +213,6 @@ class Training:
             )
 
         self.save_model(path=self.config.trained_model_path, model=self.model)
+
+        self.save_model(path=Path("model/model.h5"), model=self.model)
         print("\n✅ Training completed successfully!")

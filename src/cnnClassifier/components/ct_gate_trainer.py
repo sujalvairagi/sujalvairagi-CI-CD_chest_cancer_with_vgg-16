@@ -147,6 +147,11 @@ class CTGateTrainer:
 
         model.save(str(self.config.model_path))
 
+        deployment_path = os.path.join("model", "ct_gate_model.h5")
+        os.makedirs("model", exist_ok=True)
+        model.save(deployment_path)
+        print(f"✅ Model saved for deployment: {deployment_path}")
+
         # ... (existing code: model.save, log_params, etc.) ...
         
         # ---------------------------------------------------------
