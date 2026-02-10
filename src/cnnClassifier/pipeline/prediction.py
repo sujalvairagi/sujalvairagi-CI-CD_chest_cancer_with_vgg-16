@@ -41,7 +41,7 @@ class PredictionPipeline:
         PredictionPipeline._gate_threshold = 0.5
 
     def _load_cancer_model(self):
-        model_path = os.path.join("artifacts", "training", "model.h5")
+        model_path = os.path.join("model","model.h5")
         try:
             model = load_model(model_path)
             print("✅ Cancer model loaded successfully")
@@ -63,7 +63,7 @@ class PredictionPipeline:
             return model
 
     def _load_gate_model(self):
-        gate_path = os.path.join("artifacts", "ct_gate", "ct_gate_model.h5")
+        gate_path = os.path.join("model","ct_gate_model.h5")
         model = load_model(gate_path, compile=False)
         print("✅ Gate model loaded successfully")
         return model
