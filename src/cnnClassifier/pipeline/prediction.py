@@ -123,6 +123,6 @@ class PredictionPipeline:
             "label": final_label,
             "probability": final_prob,
             "gate_p": gate_prob_non_ct,
-            "cancer_p00": p_cancer,
+            "cancer_p": p_cancer,
             "threshold_used": self._optimal_threshold
         }
