@@ -72,19 +72,3 @@ stages:
       - LEARNING_RATE
     outs:
       - artifacts/ct_gate/ct_gate_model.h5
-
-  days_to_death_training:
-    cmd: python src/cnnClassifier/pipeline/stage_06_days_to_death_regression.py
-    deps:
-      - src/cnnClassifier/pipeline/stage_06_days_to_death_regression.py
-      - src/cnnClassifier/components/days_to_death_regressor.py  # <--- WATCHING COMPONENT
-      - config/config.yaml
-      - artifacts/days_to_death/data
-    params:
-      - IMAGE_SIZE
-      - BATCH_SIZE
-      - DTD_EPOCHS
-      - DTD_LEARNING_RATE
-      - DTD_DROPOUT_RATE
-    outs:
-      - artifacts/days_to_death/days_to_death_model.h5
